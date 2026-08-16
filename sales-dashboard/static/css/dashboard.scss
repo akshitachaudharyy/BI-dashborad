@@ -1,0 +1,1536 @@
+// =========================================================
+// SALES BI DASHBOARD
+// =========================================================
+//
+// Layout: full-width canvas with a slim top bar, a main
+// analysis column, and a narrow "tracked metrics" rail of
+// self-contained metric cards with inline sparklines.
+//
+// Compile with:
+//   npx sass static/css/dashboard.scss static/css/dashboard.css
+// =========================================================
+
+
+// =========================================================
+// 1. DESIGN TOKENS
+// =========================================================
+
+// ---- Light palette ---------------------------------------
+
+$bg-primary:        #eceef6;
+$bg-surface:        #ffffff;
+$bg-surface-alt:    #f6f7fb;
+$bg-ink:            #101014;
+
+$text-primary:      #14161d;
+$text-secondary:    #666d7d;
+$text-muted:        #9aa1b1;
+$text-inverse:      #ffffff;
+
+$border-color:      #e9ebf2;
+$border-strong:     #d9dde8;
+
+$accent:            #4f46e5;
+$accent-hover:      #4338ca;
+$accent-soft:       #eef2ff;
+$accent-fill:       #c3cbfa;
+
+$success:           #12905a;
+$success-soft:      #e4f6ed;
+$warning:           #b87708;
+$warning-soft:      #fcf3e2;
+$danger:            #d92d4e;
+$danger-soft:       #fdeaee;
+
+// ---- Dark palette ----------------------------------------
+
+$dk-bg-primary:     #090b11;
+$dk-bg-surface:     #14161f;
+$dk-bg-surface-alt: #1b1e29;
+$dk-bg-ink:         #f2f3f7;
+
+$dk-text-primary:   #eceef5;
+$dk-text-secondary: #98a0b0;
+$dk-text-muted:     #6a7182;
+
+$dk-border-color:   #222633;
+$dk-border-strong:  #323848;
+
+$dk-accent:         #8b8cf7;
+$dk-accent-hover:   #a5a6f9;
+$dk-accent-soft:    #1d1f33;
+$dk-accent-fill:    #4a4c9e;
+
+$dk-success:        #34d399;
+$dk-success-soft:   #10261d;
+$dk-warning:        #f5b544;
+$dk-warning-soft:   #2a2110;
+$dk-danger:         #f87186;
+$dk-danger-soft:    #2c161b;
+
+// ---- Spacing ---------------------------------------------
+
+$space-xxs:  4px;
+$space-xs:   8px;
+$space-sm:   12px;
+$space-md:   16px;
+$space-lg:   20px;
+$space-xl:   28px;
+
+// ---- Radius ----------------------------------------------
+
+$radius-sm:   8px;
+$radius-md:   10px;
+$radius-lg:   14px;
+$radius-pill: 999px;
+
+// ---- Layout ----------------------------------------------
+
+$header-height:     60px;
+$rail-width:        340px;
+$content-max-width: 1560px;
+
+// ---- Type ------------------------------------------------
+
+$font-sans:
+    "Inter",
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+
+// ---- Motion ----------------------------------------------
+
+$transition-fast: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-base: 240ms cubic-bezier(0.4, 0, 0.2, 1);
+
+// ---- Breakpoints -----------------------------------------
+
+$bp-mobile:  640px;
+$bp-tablet:  1024px;
+$bp-rail:    1180px;
+$bp-desktop: 1440px;
+
+
+// =========================================================
+// 2. THEME CUSTOM PROPERTIES
+// =========================================================
+
+:root {
+    --bg-primary:     #{$bg-primary};
+    --bg-surface:     #{$bg-surface};
+    --bg-surface-alt: #{$bg-surface-alt};
+    --bg-ink:         #{$bg-ink};
+
+    --text-primary:   #{$text-primary};
+    --text-secondary: #{$text-secondary};
+    --text-muted:     #{$text-muted};
+    --text-inverse:   #{$text-inverse};
+
+    --border-color:   #{$border-color};
+    --border-strong:  #{$border-strong};
+
+    --accent:         #{$accent};
+    --accent-hover:   #{$accent-hover};
+    --accent-soft:    #{$accent-soft};
+    --accent-fill:    #{$accent-fill};
+
+    --success:        #{$success};
+    --success-soft:   #{$success-soft};
+    --warning:        #{$warning};
+    --warning-soft:   #{$warning-soft};
+    --danger:         #{$danger};
+    --danger-soft:    #{$danger-soft};
+
+    --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.04);
+    --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.07);
+    --shadow-md: 0 6px 20px rgba(16, 24, 40, 0.08);
+
+    --skeleton-from: #eceef6;
+    --skeleton-to:   #f8f9fc;
+}
+
+[data-theme="dark"] {
+    --bg-primary:     #{$dk-bg-primary};
+    --bg-surface:     #{$dk-bg-surface};
+    --bg-surface-alt: #{$dk-bg-surface-alt};
+    --bg-ink:         #{$dk-bg-ink};
+
+    --text-primary:   #{$dk-text-primary};
+    --text-secondary: #{$dk-text-secondary};
+    --text-muted:     #{$dk-text-muted};
+    --text-inverse:   #{$dk-bg-primary};
+
+    --border-color:   #{$dk-border-color};
+    --border-strong:  #{$dk-border-strong};
+
+    --accent:         #{$dk-accent};
+    --accent-hover:   #{$dk-accent-hover};
+    --accent-soft:    #{$dk-accent-soft};
+    --accent-fill:    #{$dk-accent-fill};
+
+    --success:        #{$dk-success};
+    --success-soft:   #{$dk-success-soft};
+    --warning:        #{$dk-warning};
+    --warning-soft:   #{$dk-warning-soft};
+    --danger:         #{$dk-danger};
+    --danger-soft:    #{$dk-danger-soft};
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.5);
+
+    --skeleton-from: #1b1e29;
+    --skeleton-to:   #262a37;
+}
+
+
+// =========================================================
+// 3. MIXINS
+// =========================================================
+
+@mixin focus-ring {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+@mixin card-surface {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: $radius-lg;
+    box-shadow: var(--shadow-xs);
+}
+
+@mixin below($width) {
+    @media (max-width: $width) {
+        @content;
+    }
+}
+
+
+// =========================================================
+// 4. BASE
+// =========================================================
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: $font-sans;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    transition: background $transition-base, color $transition-base;
+}
+
+h1,
+h2,
+h3,
+p {
+    margin: 0;
+}
+
+button {
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+:focus-visible {
+    @include focus-ring;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+
+// =========================================================
+// 5. SHELL
+// =========================================================
+
+.app-shell {
+    min-height: 100vh;
+    width: 100%;
+}
+
+.main-content {
+    width: 100%;
+    min-width: 0;
+}
+
+
+// =========================================================
+// 6. TOPBAR
+// =========================================================
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+
+    background: var(--bg-primary);
+
+    &__inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: $space-md;
+
+        max-width: $content-max-width;
+        height: $header-height;
+        margin: 0 auto;
+        padding: 0 $space-xl;
+    }
+
+    &__left,
+    &__right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    &__logo {
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+
+        width: 30px;
+        height: 30px;
+
+        font-size: 11px;
+        font-weight: 700;
+
+        color: #ffffff;
+        background: var(--accent);
+        border-radius: $radius-md;
+    }
+
+    &__titles {
+        display: flex;
+        align-items: baseline;
+        gap: $space-xs;
+        min-width: 0;
+    }
+
+    &__app-name {
+        font-size: 13.5px;
+        font-weight: 640;
+        letter-spacing: -0.01em;
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    &__section {
+        font-size: 12px;
+        color: var(--text-muted);
+        white-space: nowrap;
+
+        &::before {
+            content: "/";
+            margin-right: 6px;
+            color: var(--border-strong);
+        }
+    }
+
+    &__dataset {
+        padding: 4px 10px;
+
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: $radius-pill;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    &__icon-btn {
+        display: grid;
+        place-items: center;
+
+        width: 34px;
+        height: 34px;
+
+        font-size: 13px;
+        color: var(--text-primary);
+
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: $radius-md;
+
+        transition: background $transition-fast, border-color $transition-fast;
+
+        &:hover {
+            background: var(--bg-surface-alt);
+            border-color: var(--border-strong);
+        }
+    }
+}
+
+
+// =========================================================
+// 7. DASHBOARD CONTENT
+// =========================================================
+
+.dashboard-content {
+    max-width: $content-max-width;
+    margin: 0 auto;
+    padding: $space-xs $space-xl $space-xl;
+}
+
+.dashboard-heading {
+    margin-bottom: $space-lg;
+
+    &__title {
+        font-size: 22px;
+        font-weight: 660;
+        letter-spacing: -0.025em;
+        color: var(--text-primary);
+    }
+
+    &__subtitle {
+        max-width: 72ch;
+        margin-top: 5px;
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--text-secondary);
+    }
+}
+
+
+// ---- Buttons ---------------------------------------------
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 8px 14px;
+
+    font-size: 12.5px;
+    font-weight: 550;
+
+    border-radius: $radius-md;
+    border: 1px solid transparent;
+
+    transition: background $transition-fast, border-color $transition-fast,
+                opacity $transition-fast;
+
+    &--primary {
+        color: #ffffff;
+        background: var(--accent);
+
+        &:hover {
+            background: var(--accent-hover);
+        }
+    }
+
+    &--dark {
+        color: var(--text-inverse);
+        background: var(--bg-ink);
+
+        &:hover {
+            opacity: 0.86;
+        }
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+
+// =========================================================
+// 8. STATE PANELS
+// =========================================================
+
+.state-panel {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+
+    padding: $space-lg;
+    margin-bottom: $space-lg;
+
+    border-radius: $radius-lg;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-xs);
+
+    &[hidden] {
+        display: none;
+    }
+
+    &__icon {
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+
+        width: 38px;
+        height: 38px;
+
+        font-size: 16px;
+        border-radius: $radius-md;
+    }
+
+    &__body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__title {
+        font-size: 14.5px;
+        font-weight: 620;
+        letter-spacing: -0.01em;
+    }
+
+    &__message {
+        margin-top: 2px;
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        overflow-wrap: anywhere;
+    }
+
+    &--error .state-panel__icon {
+        color: var(--danger);
+        background: var(--danger-soft);
+    }
+
+    &--empty .state-panel__icon {
+        color: var(--text-secondary);
+        background: var(--bg-surface-alt);
+    }
+}
+
+
+// =========================================================
+// 9. WORKSPACE LAYOUT
+// =========================================================
+
+.workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) $rail-width;
+    align-items: start;
+    gap: $space-md;
+
+    &[hidden] {
+        display: none;
+    }
+
+    &__main {
+        display: flex;
+        flex-direction: column;
+        gap: $space-md;
+        min-width: 0;
+    }
+
+    &__rail {
+        position: sticky;
+        top: $header-height + 12px;
+        min-width: 0;
+    }
+}
+
+
+// ---- Secondary stat strip --------------------------------
+
+.stat-strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: $space-xs;
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+.stat-tile {
+    @include card-surface;
+
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 12px 14px;
+
+    &__label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__dot {
+        width: 7px;
+        height: 7px;
+        flex-shrink: 0;
+        border-radius: $radius-pill;
+        background: var(--accent);
+
+        &--danger  { background: var(--danger); }
+        &--warning { background: var(--warning); }
+        &--accent  { background: var(--accent); }
+    }
+
+    &__value {
+        font-size: 19px;
+        font-weight: 660;
+        letter-spacing: -0.025em;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-primary);
+    }
+
+    &__note {
+        font-size: 10.5px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+.stat-strip[aria-busy="true"] .stat-tile__value {
+    color: transparent;
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg,
+        var(--skeleton-from) 25%,
+        var(--skeleton-to) 50%,
+        var(--skeleton-from) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+
+// =========================================================
+// 10. METRICS RAIL
+// =========================================================
+
+.rail {
+    @include card-surface;
+
+    display: flex;
+    flex-direction: column;
+    padding: $space-sm;
+    background: var(--bg-surface-alt);
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: $space-xs;
+        padding: 6px 6px 2px;
+    }
+
+    &__title {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+
+        font-size: 13.5px;
+        font-weight: 620;
+        letter-spacing: -0.01em;
+        color: var(--text-primary);
+    }
+
+    &__title-icon {
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    &__count {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    &__context {
+        margin: $space-xs 0 10px;
+        padding: 9px 12px;
+
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-secondary);
+
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: $radius-md;
+    }
+
+    &__block {
+        margin-top: 10px;
+        padding: 14px;
+
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: $radius-md;
+    }
+
+    &__block-head {
+        margin-bottom: $space-sm;
+    }
+
+    &__block-title {
+        font-size: 12.5px;
+        font-weight: 620;
+        color: var(--text-primary);
+    }
+
+    &__block-sub {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+}
+
+
+// ---- Metric cards ----------------------------------------
+
+.metric-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+.metric-card {
+    display: flex;
+    flex-direction: column;
+
+    padding: 14px 14px 0;
+    overflow: hidden;
+
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: $radius-md;
+
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    &:hover {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-sm);
+    }
+
+    &__head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    &__dot {
+        width: 8px;
+        height: 8px;
+        flex-shrink: 0;
+        border-radius: $radius-pill;
+        background: var(--accent);
+
+        &--success { background: var(--success); }
+        &--accent  { background: var(--accent); }
+        &--warning { background: var(--warning); }
+        &--danger  { background: var(--danger); }
+    }
+
+    &__label {
+        font-size: 12px;
+        font-weight: 560;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__qualifier {
+        font-size: 10.5px;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
+    &__value {
+        margin-top: 6px;
+        font-size: 24px;
+        font-weight: 660;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-primary);
+    }
+
+    // Sparkline bleeds to the card edges.
+    &__spark {
+        margin: 10px -14px 0;
+        min-height: 56px;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    &__foot {
+        padding: 8px 0 12px;
+        font-size: 10.5px;
+        line-height: 1.45;
+        color: var(--text-muted);
+
+        &:empty {
+            display: none;
+        }
+    }
+}
+
+.metric-list[aria-busy="true"] .metric-card__value {
+    color: transparent;
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg,
+        var(--skeleton-from) 25%,
+        var(--skeleton-to) 50%,
+        var(--skeleton-from) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+
+// ---- Sparkline -------------------------------------------
+
+.sparkline {
+    display: block;
+    width: 100%;
+    height: 56px;
+
+    &__area {
+        fill: var(--accent);
+        opacity: 0.11;
+    }
+
+    &__line {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 1.6;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+        vector-effect: non-scaling-stroke;
+    }
+}
+
+
+// =========================================================
+// 11. PANELS
+// =========================================================
+
+.panel {
+    @include card-surface;
+
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    &__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: $space-sm;
+
+        padding: 14px $space-lg 6px;
+
+        &--centered {
+            justify-content: center;
+            padding-bottom: $space-sm;
+            text-align: center;
+        }
+    }
+
+    &__title {
+        font-size: 13.5px;
+        font-weight: 620;
+        letter-spacing: -0.01em;
+    }
+
+    &__subtitle {
+        margin-top: 2px;
+        font-size: 11.5px;
+        color: var(--text-muted);
+    }
+
+    &__meta {
+        flex-shrink: 0;
+        padding: 3px 9px;
+
+        font-size: 10.5px;
+        font-weight: 550;
+
+        color: var(--text-secondary);
+        background: var(--bg-surface-alt);
+        border-radius: $radius-pill;
+        white-space: nowrap;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    &__body {
+        flex: 1;
+        padding: 6px $space-lg $space-lg;
+
+        &--flush {
+            padding: 0;
+        }
+    }
+
+    &__legend {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+
+        padding: 0 $space-lg $space-lg;
+
+        font-size: 11px;
+        color: var(--text-secondary);
+    }
+
+    &__legend-swatch {
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+        background: var(--accent-fill);
+    }
+}
+
+.panel-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-md;
+}
+
+
+// =========================================================
+// 12. CHARTS
+// =========================================================
+
+.chart {
+    min-width: 0;
+
+    &__loading,
+    &__empty {
+        display: grid;
+        place-items: center;
+        min-height: 140px;
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+}
+
+
+// ---- Vertical column chart -------------------------------
+
+.column-chart {
+    display: flex;
+    align-items: stretch;
+    gap: $space-sm;
+
+    &__scale {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: flex-end;
+        flex-shrink: 0;
+
+        height: 260px;
+        padding-bottom: 1px;
+
+        font-size: 10.5px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__plot {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__grid {
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 260px;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+
+        pointer-events: none;
+    }
+
+    &__grid-line {
+        height: 1px;
+        background: var(--border-color);
+    }
+
+    &__bars {
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-around;
+        gap: 2%;
+
+        height: 260px;
+    }
+
+    &__bar-wrap {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+    }
+
+    &__bar {
+        width: 100%;
+        max-width: 54px;
+        margin: 0 auto;
+        min-height: 2px;
+
+        background: var(--accent-fill);
+        border-radius: 4px 4px 0 0;
+
+        transition: height $transition-base, background $transition-fast;
+
+        &:hover {
+            background: var(--accent);
+        }
+    }
+
+    &__labels {
+        display: flex;
+        justify-content: space-around;
+        gap: 2%;
+        margin-top: 10px;
+    }
+
+    &__label {
+        flex: 1;
+        min-width: 0;
+
+        font-size: 10.5px;
+        line-height: 1.3;
+        color: var(--text-secondary);
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+}
+
+
+// ---- Horizontal bars -------------------------------------
+
+.bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.bar-row {
+    display: grid;
+    grid-template-columns: minmax(80px, 132px) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+
+    &__label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__track {
+        position: relative;
+        height: 7px;
+        background: var(--bg-surface-alt);
+        border-radius: $radius-pill;
+        overflow: hidden;
+    }
+
+    &__fill {
+        height: 100%;
+        min-width: 3px;
+        border-radius: $radius-pill;
+        background: var(--accent-fill);
+        transition: width $transition-base;
+    }
+
+    &__value {
+        min-width: 62px;
+
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    &:first-child &__fill {
+        background: var(--accent);
+    }
+
+    &--danger &__fill {
+        background: var(--danger);
+        opacity: 0.8;
+    }
+}
+
+
+// ---- Trend (SVG) -----------------------------------------
+
+.line-chart {
+    width: 100%;
+
+    &__svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+
+    &__area {
+        fill: var(--accent);
+        opacity: 0.09;
+    }
+
+    &__line {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 1.6;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+        vector-effect: non-scaling-stroke;
+    }
+
+    &__grid {
+        stroke: var(--border-color);
+        stroke-width: 1;
+        stroke-dasharray: 3 4;
+        vector-effect: non-scaling-stroke;
+    }
+
+    &__axis {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 9px;
+        font-size: 10.5px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__scale {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 10.5px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+
+// ---- Pie -------------------------------------------------
+
+.pie-chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-md;
+
+    &__svg {
+        display: block;
+        width: 100%;
+        max-width: 180px;
+        height: auto;
+    }
+
+    &__slice {
+        stroke: var(--bg-surface);
+        stroke-width: 2;
+        transition: opacity $transition-fast;
+
+        &--1 { fill: var(--accent); }
+        &--2 { fill: var(--warning); }
+        &--3 { fill: var(--success); }
+        &--4 { fill: var(--accent-fill); }
+    }
+
+    &__slice-label {
+        font-family: $font-sans;
+        font-size: 13px;
+        font-weight: 640;
+        fill: #ffffff;
+        font-variant-numeric: tabular-nums;
+        pointer-events: none;
+    }
+
+    &__legend {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        width: 100%;
+    }
+
+    &__legend-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+    }
+
+    &__swatch {
+        width: 9px;
+        height: 9px;
+        flex-shrink: 0;
+        border-radius: 2px;
+
+        &--1 { background: var(--accent); }
+        &--2 { background: var(--warning); }
+        &--3 { background: var(--success); }
+        &--4 { background: var(--accent-fill); }
+    }
+
+    &__legend-label {
+        flex: 1;
+        color: var(--text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__legend-percent {
+        padding: 2px 7px;
+
+        font-size: 11px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+
+        color: var(--accent);
+        background: var(--accent-soft);
+        border-radius: $radius-pill;
+    }
+
+    &__legend-value {
+        min-width: 62px;
+        font-size: 12px;
+        font-weight: 620;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+    }
+}
+
+
+// ---- Data table ------------------------------------------
+
+.data-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+
+    th,
+    td {
+        padding: 9px $space-lg;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    th {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    tbody tr:hover td {
+        background: var(--bg-surface-alt);
+    }
+
+    &__num {
+        text-align: right;
+        font-weight: 550;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__muted {
+        color: var(--text-secondary);
+    }
+
+    &__tag {
+        display: inline-block;
+        padding: 2px 9px;
+
+        font-size: 11px;
+        font-weight: 500;
+
+        color: var(--accent);
+        background: var(--accent-soft);
+        border-radius: $radius-pill;
+    }
+}
+
+
+// =========================================================
+// 13. FOOTER
+// =========================================================
+
+.dashboard-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-md;
+    flex-wrap: wrap;
+
+    margin-top: $space-lg;
+    padding-top: $space-sm;
+    border-top: 1px solid var(--border-color);
+
+    font-size: 11px;
+    color: var(--text-muted);
+
+    &__timestamp {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+
+// =========================================================
+// 14. RESPONSIVE
+// =========================================================
+
+@include below($bp-desktop) {
+
+    .stat-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+
+// ---- Rail drops below the main column --------------------
+
+@include below($bp-rail) {
+
+    .workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .workspace__rail {
+        position: static;
+    }
+
+    .metric-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+}
+
+
+@include below($bp-tablet) {
+
+    .topbar__inner {
+        padding: 0 $space-lg;
+    }
+
+    .topbar__dataset {
+        display: none;
+    }
+
+    .dashboard-content {
+        padding: $space-xs $space-lg $space-lg;
+    }
+
+    .stat-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .panel-pair {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+
+// ---- Mobile ----------------------------------------------
+
+@include below($bp-mobile) {
+
+    .topbar__inner {
+        padding: 0 $space-md;
+        gap: 6px;
+    }
+
+    .topbar__right {
+        gap: 6px;
+    }
+
+    .topbar__section {
+        display: none;
+    }
+
+    .dashboard-content {
+        padding: $space-xs $space-md $space-md;
+    }
+
+    .dashboard-heading__title {
+        font-size: 19px;
+    }
+
+    .stat-strip,
+    .metric-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .state-panel {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panel__header {
+        padding: 12px $space-md 6px;
+    }
+
+    .panel__body {
+        padding: 6px $space-md $space-md;
+
+        &--flush {
+            padding: 0;
+        }
+    }
+
+    .column-chart {
+
+        &__scale,
+        &__grid,
+        &__bars {
+            height: 190px;
+        }
+
+        &__label {
+            font-size: 9.5px;
+        }
+    }
+
+    .bar-row {
+        grid-template-columns: minmax(60px, 88px) minmax(0, 1fr) auto;
+        gap: 7px;
+
+        &__label,
+        &__value {
+            font-size: 11px;
+        }
+
+        &__value {
+            min-width: 54px;
+        }
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 8px $space-md;
+    }
+}
+
+
+// =========================================================
+// 15. PRINT
+// =========================================================
+
+@media print {
+
+    .topbar {
+        display: none;
+    }
+
+    .workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

@@ -2,7 +2,8 @@ from flask import Flask, jsonify
 
 from config import Config
 from database import db
-from routes.dashboard import dashboard_bp
+from routes.dashboard import dashboard_api, dashboard_bp
+from routes.pages import pages_bp
 
 
 # =========================================================
@@ -29,9 +30,22 @@ db.init_app(app)
 # =========================================================
 # REGISTER ROUTES
 # =========================================================
+#
+# pages_bp       -> rendered HTML ("/", "/dashboard")
+# dashboard_bp   -> KPI summary   ("/api/dashboard/summary")
+# dashboard_api  -> analytics     ("/api/dashboard/trend", ...)
+# =========================================================
+
+app.register_blueprint(
+    pages_bp
+)
 
 app.register_blueprint(
     dashboard_bp
+)
+
+app.register_blueprint(
+    dashboard_api
 )
 
 
@@ -56,11 +70,18 @@ def health():
 
 
 # =========================================================
-# ROOT
+# SERVICE INFO
+# =========================================================
+#
+# "/" now renders the dashboard page, so the previous
+# JSON service descriptor lives here instead.
 # =========================================================
 
-@app.route("/")
-def index():
+@app.route(
+    "/api/info",
+    methods=["GET"]
+)
+def info():
 
     return jsonify({
 

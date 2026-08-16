@@ -1,6 +1,6 @@
 import sys
 
-from app import create_app
+from app import app
 from services.importer import import_file
 
 
@@ -20,8 +20,6 @@ def main():
         sys.exit(1)
 
     file_path = sys.argv[1]
-
-    app = create_app()
 
     with app.app_context():
 

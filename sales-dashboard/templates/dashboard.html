@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
 
@@ -10,27 +10,575 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Sales Analytics Dashboard</title>
+    <title>Sales BI Dashboard</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/dashboard.css') }}"
+    >
 
 </head>
 
 <body>
 
-    <main id="app">
+<div class="app-shell">
 
-        <h1>Sales Analytics Dashboard</h1>
+    <main class="main-content">
 
-        <p>
-            Backend is running.
-        </p>
+        <!-- ============================================= -->
+        <!-- TOPBAR                                        -->
+        <!-- ============================================= -->
 
-        <div id="status">
-            Loading...
-        </div>
+        <header class="topbar">
+
+            <div class="topbar__inner">
+
+                <div class="topbar__left">
+
+                    <span class="topbar__logo" aria-hidden="true">SB</span>
+
+                    <span class="topbar__titles">
+                        <span class="topbar__app-name">Sales BI</span>
+                        <span class="topbar__section">
+                            Performance Overview
+                        </span>
+                    </span>
+
+                </div>
+
+                <div class="topbar__right">
+
+                    <span class="topbar__dataset" id="datasetLabel"></span>
+
+                    <button
+                        type="button"
+                        class="topbar__icon-btn"
+                        id="themeToggle"
+                        aria-label="Switch to dark mode"
+                        aria-pressed="false"
+                        title="Toggle dark mode"
+                    >
+                        <span
+                            class="topbar__icon-glyph"
+                            id="themeIcon"
+                            aria-hidden="true"
+                        >🌙</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn--dark"
+                        id="refreshButton"
+                    >
+                        <span aria-hidden="true">⟳</span>
+                        <span>Refresh</span>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- ============================================= -->
+        <!-- CONTENT                                       -->
+        <!-- ============================================= -->
+
+        <section class="dashboard-content">
+
+            <!-- HEADING -->
+
+            <section class="dashboard-heading">
+
+                <h1 class="dashboard-heading__title">
+                    Sales Performance Overview
+                </h1>
+
+                <p class="dashboard-heading__subtitle">
+                    Consolidated KPIs across all imported sales transactions.
+                    Cancelled records are retained in the database and
+                    separated by the BI layer.
+                </p>
+
+            </section>
+
+            <!-- ERROR STATE -->
+
+            <section
+                class="state-panel state-panel--error"
+                id="errorState"
+                role="alert"
+                hidden
+            >
+
+                <span class="state-panel__icon" aria-hidden="true">⚠</span>
+
+                <div class="state-panel__body">
+
+                    <h2 class="state-panel__title">
+                        Unable to load dashboard data
+                    </h2>
+
+                    <p class="state-panel__message" id="errorMessage">
+                        The dashboard API did not respond as expected.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="btn btn--primary"
+                    id="retryButton"
+                >
+                    Retry
+                </button>
+
+            </section>
+
+            <!-- EMPTY STATE -->
+
+            <section
+                class="state-panel state-panel--empty"
+                id="emptyState"
+                hidden
+            >
+
+                <span class="state-panel__icon" aria-hidden="true">▤</span>
+
+                <div class="state-panel__body">
+
+                    <h2 class="state-panel__title">
+                        No sales data available
+                    </h2>
+
+                    <p class="state-panel__message">
+                        The database contains no sales records yet. Import a
+                        sales file to populate this dashboard.
+                    </p>
+
+                </div>
+
+            </section>
+
+            <!-- ========================================= -->
+            <!-- WORKSPACE: main column + metrics rail     -->
+            <!-- ========================================= -->
+
+            <div class="workspace" id="workspace">
+
+                <!-- ------------------------------------- -->
+                <!-- MAIN COLUMN                           -->
+                <!-- ------------------------------------- -->
+
+                <div class="workspace__main">
+
+                    <!-- Secondary stat strip -->
+
+                    <section
+                        class="stat-strip"
+                        id="statStrip"
+                        aria-label="Supporting metrics"
+                        aria-busy="true"
+                    >
+
+                        <article class="stat-tile">
+                            <span class="stat-tile__label">
+                                <span class="stat-tile__dot
+                                             stat-tile__dot--accent"
+                                      aria-hidden="true"></span>
+                                Gross Sales
+                            </span>
+                            <span
+                                class="stat-tile__value"
+                                data-kpi="gross_sales"
+                                data-format="currency-compact"
+                            >—</span>
+                            <span class="stat-tile__note">
+                                Includes cancelled records
+                            </span>
+                        </article>
+
+                        <article class="stat-tile">
+                            <span class="stat-tile__label">
+                                <span class="stat-tile__dot
+                                             stat-tile__dot--danger"
+                                      aria-hidden="true"></span>
+                                Cancelled Orders
+                            </span>
+                            <span
+                                class="stat-tile__value"
+                                data-kpi="cancelled_orders"
+                            >—</span>
+                            <span class="stat-tile__note">
+                                Orders with cancelled status
+                            </span>
+                        </article>
+
+                        <article class="stat-tile">
+                            <span class="stat-tile__label">
+                                <span class="stat-tile__dot
+                                             stat-tile__dot--warning"
+                                      aria-hidden="true"></span>
+                                Cancelled Value
+                            </span>
+                            <span
+                                class="stat-tile__value"
+                                data-kpi="cancelled_value"
+                                data-format="currency-compact"
+                            >—</span>
+                            <span class="stat-tile__note">
+                                Value lost to cancellations
+                            </span>
+                        </article>
+
+                        <article class="stat-tile">
+                            <span class="stat-tile__label">
+                                <span class="stat-tile__dot
+                                             stat-tile__dot--accent"
+                                      aria-hidden="true"></span>
+                                Avg Order Value
+                            </span>
+                            <span
+                                class="stat-tile__value"
+                                data-kpi="average_order_value"
+                                data-format="currency"
+                            >—</span>
+                            <span class="stat-tile__note">
+                                Net sales ÷ total orders
+                            </span>
+                        </article>
+
+                        <article class="stat-tile">
+                            <span class="stat-tile__label">
+                                <span class="stat-tile__dot
+                                             stat-tile__dot--accent"
+                                      aria-hidden="true"></span>
+                                Avg Selling Price
+                            </span>
+                            <span
+                                class="stat-tile__value"
+                                data-kpi="average_selling_price"
+                                data-format="currency"
+                            >—</span>
+                            <span class="stat-tile__note">
+                                Net sales ÷ total units
+                            </span>
+                        </article>
+
+                    </section>
+
+                    <!-- CATEGORY COLUMN CHART -->
+
+                    <article class="panel">
+
+                        <header class="panel__header panel__header--centered">
+                            <h2 class="panel__title">
+                                Net Revenue by Product Category
+                            </h2>
+                        </header>
+
+                        <div class="panel__body">
+                            <div class="chart" data-chart="categories">
+                                <div class="chart__loading">Loading chart…</div>
+                            </div>
+                        </div>
+
+                        <footer class="panel__legend">
+                            <span class="panel__legend-swatch"
+                                  aria-hidden="true"></span>
+                            <span>Category</span>
+                        </footer>
+
+                    </article>
+
+                    <!-- TREND -->
+
+                    <article class="panel">
+
+                        <header class="panel__header">
+                            <div>
+                                <h2 class="panel__title">Daily Sales Trend</h2>
+                                <p class="panel__subtitle">
+                                    Net revenue per day, cancelled
+                                    transactions excluded
+                                </p>
+                            </div>
+                            <span class="panel__meta" data-meta="trend"></span>
+                        </header>
+
+                        <div class="panel__body">
+                            <div class="chart" data-chart="trend">
+                                <div class="chart__loading">Loading chart…</div>
+                            </div>
+                        </div>
+
+                    </article>
+
+                    <!-- GEOGRAPHY + STATUS -->
+
+                    <div class="panel-pair">
+
+                        <article class="panel">
+
+                            <header class="panel__header">
+                                <div>
+                                    <h2 class="panel__title">
+                                        Top 10 States
+                                    </h2>
+                                    <p class="panel__subtitle">
+                                        Net revenue by shipping state
+                                    </p>
+                                </div>
+                                <span class="panel__meta"
+                                      data-meta="states"></span>
+                            </header>
+
+                            <div class="panel__body">
+                                <div class="chart" data-chart="states">
+                                    <div class="chart__loading">
+                                        Loading chart…
+                                    </div>
+                                </div>
+                            </div>
+
+                        </article>
+
+                        <article class="panel">
+
+                            <header class="panel__header">
+                                <div>
+                                    <h2 class="panel__title">
+                                        Order Status
+                                    </h2>
+                                    <p class="panel__subtitle">
+                                        Distinct orders per status
+                                    </p>
+                                </div>
+                                <span class="panel__meta"
+                                      data-meta="status"></span>
+                            </header>
+
+                            <div class="panel__body">
+                                <div class="chart" data-chart="status">
+                                    <div class="chart__loading">
+                                        Loading chart…
+                                    </div>
+                                </div>
+                            </div>
+
+                        </article>
+
+                    </div>
+
+                    <!-- TOP PRODUCTS -->
+
+                    <article class="panel">
+
+                        <header class="panel__header">
+                            <div>
+                                <h2 class="panel__title">Top Products</h2>
+                                <p class="panel__subtitle">
+                                    Highest contributing SKUs by net revenue
+                                </p>
+                            </div>
+                            <span class="panel__meta"
+                                  data-meta="products"></span>
+                        </header>
+
+                        <div class="panel__body panel__body--flush">
+                            <div class="chart" data-chart="products">
+                                <div class="chart__loading">Loading table…</div>
+                            </div>
+                        </div>
+
+                    </article>
+
+                </div>
+
+                <!-- ------------------------------------- -->
+                <!-- METRICS RAIL                          -->
+                <!-- ------------------------------------- -->
+
+                <aside class="workspace__rail" aria-label="Tracked metrics">
+
+                    <div class="rail">
+
+                        <header class="rail__header">
+
+                            <h2 class="rail__title">
+                                <span class="rail__title-icon"
+                                      aria-hidden="true">◷</span>
+                                Tracked Metrics
+                            </h2>
+
+                            <span class="rail__count" id="railPeriod"></span>
+
+                        </header>
+
+                        <div class="rail__context">
+                            All imported records
+                        </div>
+
+                        <!-- METRIC CARDS -->
+
+                        <section
+                            class="metric-list"
+                            id="metricList"
+                            aria-busy="true"
+                        >
+
+                            <article class="metric-card">
+                                <header class="metric-card__head">
+                                    <span class="metric-card__dot
+                                                 metric-card__dot--success"
+                                          aria-hidden="true"></span>
+                                    <span class="metric-card__label">
+                                        Net Sales
+                                    </span>
+                                    <span class="metric-card__qualifier">
+                                        (SUM)
+                                    </span>
+                                </header>
+                                <p
+                                    class="metric-card__value"
+                                    data-kpi="net_sales"
+                                    data-format="currency-compact"
+                                >—</p>
+                                <div
+                                    class="metric-card__spark"
+                                    data-spark="revenue"
+                                ></div>
+                                <p class="metric-card__foot"
+                                   data-spark-caption="revenue"></p>
+                            </article>
+
+                            <article class="metric-card">
+                                <header class="metric-card__head">
+                                    <span class="metric-card__dot
+                                                 metric-card__dot--accent"
+                                          aria-hidden="true"></span>
+                                    <span class="metric-card__label">
+                                        Total Orders
+                                    </span>
+                                    <span class="metric-card__qualifier">
+                                        (COUNT)
+                                    </span>
+                                </header>
+                                <p
+                                    class="metric-card__value"
+                                    data-kpi="total_orders"
+                                >—</p>
+                                <div
+                                    class="metric-card__spark"
+                                    data-spark="orders"
+                                ></div>
+                                <p class="metric-card__foot"
+                                   data-spark-caption="orders"></p>
+                            </article>
+
+                            <article class="metric-card">
+                                <header class="metric-card__head">
+                                    <span class="metric-card__dot
+                                                 metric-card__dot--accent"
+                                          aria-hidden="true"></span>
+                                    <span class="metric-card__label">
+                                        Total Units
+                                    </span>
+                                    <span class="metric-card__qualifier">
+                                        (SUM)
+                                    </span>
+                                </header>
+                                <p
+                                    class="metric-card__value"
+                                    data-kpi="total_units"
+                                >—</p>
+                                <div
+                                    class="metric-card__spark"
+                                    data-spark="quantity"
+                                ></div>
+                                <p class="metric-card__foot"
+                                   data-spark-caption="quantity"></p>
+                            </article>
+
+                            <article class="metric-card">
+                                <header class="metric-card__head">
+                                    <span class="metric-card__dot
+                                                 metric-card__dot--accent"
+                                          aria-hidden="true"></span>
+                                    <span class="metric-card__label">
+                                        Source Records
+                                    </span>
+                                    <span class="metric-card__qualifier">
+                                        (ROWS)
+                                    </span>
+                                </header>
+                                <p
+                                    class="metric-card__value"
+                                    data-kpi="total_rows"
+                                >—</p>
+                                <p class="metric-card__foot">
+                                    Raw rows retained in the database,
+                                    cancellations included.
+                                </p>
+                            </article>
+
+                        </section>
+
+                        <!-- REVENUE SHARE -->
+
+                        <section class="rail__block">
+
+                            <header class="rail__block-head">
+                                <h3 class="rail__block-title">Revenue Share</h3>
+                                <span class="rail__block-sub">
+                                    Amazon-fulfilled vs merchant-fulfilled
+                                </span>
+                            </header>
+
+                            <div class="chart" data-chart="fulfilment">
+                                <div class="chart__loading">Loading…</div>
+                            </div>
+
+                        </section>
+
+                        <!-- SALES CHANNEL -->
+
+                        <section class="rail__block">
+
+                            <header class="rail__block-head">
+                                <h3 class="rail__block-title">Sales Channel</h3>
+                                <span class="rail__block-sub">
+                                    Net revenue per channel
+                                </span>
+                            </header>
+
+                            <div class="chart" data-chart="channels">
+                                <div class="chart__loading">Loading…</div>
+                            </div>
+
+                        </section>
+
+                    </div>
+
+                </aside>
+
+            </div>
+
+            <footer class="dashboard-footer">
+                <span>
+                    KPIs are calculated by the backend BI layer.
+                    Source records are never modified.
+                </span>
+                <span id="lastUpdated" class="dashboard-footer__timestamp"></span>
+            </footer>
+
+        </section>
 
     </main>
 
-    <script src="/static/js/dashboard.js"></script>
+</div>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
 </body>
 

@@ -1,4 +1,4 @@
-from app import create_app
+from app import app
 from database import db
 
 from models import (
@@ -8,8 +8,6 @@ from models import (
 
 
 def main():
-
-    app = create_app()
 
     with app.app_context():
 

@@ -24,6 +24,8 @@ from services.analytics import (
     get_top_products
 )
 
+from services.bi_metrics import SalesMetrics
+
 
 dashboard_api = Blueprint(
     "dashboard_api",
@@ -130,15 +132,6 @@ def top_products():
         get_top_products()
     )
     
-dashboard_bp = Blueprint(
-    "dashboard",
-    __name__,
-    url_prefix="/api/dashboard"
-)
-
-from services.bi_metrics import SalesMetrics
-
-
 dashboard_bp = Blueprint(
     "dashboard",
     __name__,
