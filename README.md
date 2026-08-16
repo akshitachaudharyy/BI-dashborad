@@ -6,8 +6,12 @@ BI layer decides which records contribute to each KPI.
 
 ## Links
 
-- Repository: https://github.com/akshitachaudharyy/BI-dashborad
+- Live dashboard: [web-production-21caac.up.railway.app](https://web-production-21caac.up.railway.app)
+- Repository: [github.com/akshitachaudharyy/BI-dashborad](https://github.com/akshitachaudharyy/BI-dashborad)
 - Database: MySQL hosted on Railway (project `bi-dashboard`)
+
+The application and the database both run on Railway. The dashboard
+page and the JSON API are served by the same Flask service.
 
 ## Stack
 
