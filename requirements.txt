@@ -1,0 +1,4 @@
+# The application lives in sales-dashboard/. This root-level file
+# exists so the build platform detects a Python project from the
+# repository root and installs the real dependency set.
+-r sales-dashboard/requirements.txt
