@@ -1,888 +1,342 @@
-from sqlalchemy import (
-    func,
-    case,
-    distinct
-)
+"""
+=========================================================
+CHART AGGREGATIONS
+=========================================================
+
+Grouped aggregations behind the analytics endpoints.
+
+Measure used by each function -- all imported from
+services/bi_definitions.py, never redefined here:
+
+    get_kpis            delegates to SalesMetrics
+    get_sales_trend     net sales, by order_date
+    get_category_sales  net sales, by category
+    get_state_sales     net sales, by ship_state
+    get_fulfilment      net sales, by fulfilment
+    get_order_status    distinct orders + gross value,
+                        by status
+    get_sales_channel   net sales, by sales_channel
+    get_top_products    net sales, by sku/style/category
+
+Order status is the one panel that intentionally reports
+GROSS value: its whole purpose is to show the cancelled
+bucket, which net sales excludes by definition. Every other
+revenue chart uses NET sales, matching the headline KPI.
+
+Order counts everywhere use COUNT(DISTINCT order_id).
+
+Every function accepts an optional DashboardFilters and
+aggregates in MySQL -- no raw rows are pulled into Python
+or Pandas for dashboard requests.
+"""
 
 from database import db
 from models import Sale
+
+from services.bi_definitions import (
+
+    net_sales_expr,
+    gross_sales_expr,
+    total_units_expr,
+    total_orders_expr
+)
+
+from services.bi_metrics import SalesMetrics
+from services.query_filters import DashboardFilters
 
 
 # =========================================================
 # HELPERS
 # =========================================================
 
-CANCELLED_STATUS = "Cancelled"
+def _filters(filters):
 
-
-def is_cancelled():
-
-    return func.lower(
-        func.coalesce(
-            Sale.status,
-            ""
-        )
-    ) == CANCELLED_STATUS.lower()
+    return filters if filters is not None else DashboardFilters()
 
 
 # =========================================================
 # KPI
 # =========================================================
 
-def get_kpis():
+def get_kpis(filters=None):
+    """
+    Summary KPIs.
 
-    # -----------------------------------------------------
-    # Total distinct orders
-    # -----------------------------------------------------
+    Delegates entirely to SalesMetrics so this endpoint can
+    never report different numbers from /summary. Previously
+    this function re-implemented every KPI with subtly
+    different definitions (units included cancellations,
+    average order value used a different denominator).
+    """
 
-    total_orders = (
-
-        db.session
-
-        .query(
-            func.count(
-                distinct(
-                    Sale.order_id
-                )
-            )
-        )
-
-        .scalar()
-    )
-
-    # -----------------------------------------------------
-    # Cancelled orders
-    # -----------------------------------------------------
-
-    cancelled_orders = (
-
-        db.session
-
-        .query(
-            func.count(
-                distinct(
-                    case(
-                        (
-                            is_cancelled(),
-                            Sale.order_id
-                        )
-                    )
-                )
-            )
-        )
-
-        .scalar()
-    )
-
-    # -----------------------------------------------------
-    # Net orders
-    # -----------------------------------------------------
-
-    net_orders = (
-        total_orders or 0
-    ) - (
-        cancelled_orders or 0
-    )
-
-    # -----------------------------------------------------
-    # Total units
-    # -----------------------------------------------------
-
-    total_units = (
-
-        db.session
-
-        .query(
-            func.coalesce(
-                func.sum(
-                    Sale.quantity
-                ),
-                0
-            )
-        )
-
-        .scalar()
-    )
-
-    # -----------------------------------------------------
-    # Gross sales
-    # -----------------------------------------------------
-
-    gross_sales = (
-
-        db.session
-
-        .query(
-            func.coalesce(
-                func.sum(
-                    Sale.amount
-                ),
-                0
-            )
-        )
-
-        .scalar()
-    )
-
-    # -----------------------------------------------------
-    # Net sales
-    #
-    # Cancelled transactions excluded
-    # -----------------------------------------------------
-
-    net_sales = (
-
-        db.session
-
-        .query(
-
-            func.coalesce(
-
-                func.sum(
-
-                    case(
-
-                        (
-                            ~is_cancelled(),
-                            Sale.amount
-                        ),
-
-                        else_=0
-                    )
-                ),
-
-                0
-            )
-        )
-
-        .scalar()
-    )
-
-    # -----------------------------------------------------
-    # Cancelled sales value
-    # -----------------------------------------------------
-
-    cancelled_sales = (
-
-        db.session
-
-        .query(
-
-            func.coalesce(
-
-                func.sum(
-
-                    case(
-
-                        (
-                            is_cancelled(),
-                            Sale.amount
-                        ),
-
-                        else_=0
-                    )
-                ),
-
-                0
-            )
-        )
-
-        .scalar()
-    )
-
-    # -----------------------------------------------------
-    # Average order value
-    # -----------------------------------------------------
-
-    average_order_value = 0
-
-    if net_orders:
-
-        average_order_value = (
-            float(net_sales or 0)
-            /
-            net_orders
-        )
-
-    # -----------------------------------------------------
-    # Cancellation rate
-    # -----------------------------------------------------
-
-    cancellation_rate = 0
-
-    if total_orders:
-
-        cancellation_rate = (
-
-            (
-                cancelled_orders or 0
-            )
-            /
-            total_orders
-        ) * 100
-
-    return {
-
-        "total_orders":
-            int(
-                total_orders or 0
-            ),
-
-        "cancelled_orders":
-            int(
-                cancelled_orders or 0
-            ),
-
-        "net_orders":
-            int(
-                net_orders
-            ),
-
-        "total_units":
-            int(
-                total_units or 0
-            ),
-
-        "gross_sales":
-            round(
-                float(
-                    gross_sales or 0
-                ),
-                2
-            ),
-
-        "net_sales":
-            round(
-                float(
-                    net_sales or 0
-                ),
-                2
-            ),
-
-        "cancelled_sales":
-            round(
-                float(
-                    cancelled_sales or 0
-                ),
-                2
-            ),
-
-        "average_order_value":
-            round(
-                average_order_value,
-                2
-            ),
-
-        "cancellation_rate":
-            round(
-                cancellation_rate,
-                2
-            )
-    }
+    return SalesMetrics.dashboard_summary(filters)
 
 
 # =========================================================
-# SALES TREND
+# SALES TREND  -- net sales by date
 # =========================================================
 
-def get_sales_trend():
+def get_sales_trend(filters=None):
 
-    net_revenue = func.sum(
+    # Ordered chronologically rather than by size.
+    query = db.session.query(
 
-        case(
+        Sale.order_date.label("date"),
 
-            (
-                ~is_cancelled(),
-                Sale.amount
-            ),
+        total_orders_expr().label("orders"),
 
-            else_=0
-        )
+        total_units_expr().label("quantity"),
+
+        net_sales_expr().label("revenue")
     )
 
-    results = (
+    query = _filters(filters).apply(query)
 
-        db.session
-
-        .query(
-
-            Sale.order_date.label(
-                "date"
-            ),
-
-            func.count(
-                distinct(
-                    Sale.order_id
-                )
-            ).label(
-                "orders"
-            ),
-
-            func.coalesce(
-                func.sum(
-                    Sale.quantity
-                ),
-                0
-            ).label(
-                "quantity"
-            ),
-
-            func.coalesce(
-                net_revenue,
-                0
-            ).label(
-                "revenue"
-            )
-        )
-
-        .filter(
-            Sale.order_date.isnot(None)
-        )
-
-        .group_by(
-            Sale.order_date
-        )
-
-        .order_by(
-            Sale.order_date
-        )
-
+    rows = (
+        query
+        .filter(Sale.order_date.isnot(None))
+        .group_by(Sale.order_date)
+        .order_by(Sale.order_date)
         .all()
     )
 
     return [
-
         {
-
-            "date":
-                row.date.isoformat(),
-
-            "orders":
-                int(
-                    row.orders or 0
-                ),
-
-            "quantity":
-                int(
-                    row.quantity or 0
-                ),
-
-            "revenue":
-                float(
-                    row.revenue or 0
-                )
+            "date": row.date.isoformat(),
+            "orders": int(row.orders or 0),
+            "quantity": int(row.quantity or 0),
+            "revenue": float(row.revenue or 0)
         }
-
-        for row in results
+        for row in rows
     ]
 
 
 # =========================================================
-# CATEGORY
+# CATEGORY  -- net sales by category
 # =========================================================
 
-def get_category_sales():
+def get_category_sales(filters=None):
 
-    revenue = func.sum(
+    revenue = net_sales_expr()
 
-        case(
+    query = db.session.query(
 
-            (
-                ~is_cancelled(),
-                Sale.amount
-            ),
+        Sale.category,
 
-            else_=0
-        )
+        total_orders_expr().label("orders"),
+
+        total_units_expr().label("quantity"),
+
+        revenue.label("revenue")
     )
 
-    results = (
-
-        db.session
-
-        .query(
-
-            Sale.category,
-
-            func.count(
-                distinct(
-                    Sale.order_id
-                )
-            ).label(
-                "orders"
-            ),
-
-            func.coalesce(
-                func.sum(
-                    Sale.quantity
-                ),
-                0
-            ).label(
-                "quantity"
-            ),
-
-            func.coalesce(
-                revenue,
-                0
-            ).label(
-                "revenue"
-            )
-        )
-
-        .group_by(
-            Sale.category
-        )
-
-        .order_by(
-            revenue.desc()
-        )
-
+    rows = (
+        _filters(filters).apply(query)
+        .group_by(Sale.category)
+        .order_by(revenue.desc())
         .all()
     )
 
     return [
-
         {
-
-            "category":
-                row.category or "Unknown",
-
-            "orders":
-                int(
-                    row.orders or 0
-                ),
-
-            "quantity":
-                int(
-                    row.quantity or 0
-                ),
-
-            "revenue":
-                float(
-                    row.revenue or 0
-                )
+            "category": row.category or "Unknown",
+            "orders": int(row.orders or 0),
+            "quantity": int(row.quantity or 0),
+            "revenue": float(row.revenue or 0)
         }
-
-        for row in results
+        for row in rows
     ]
 
 
 # =========================================================
-# STATE
+# STATE  -- net sales by shipping state
+# =========================================================
+#
+# Rows with a NULL ship_state are excluded: an unknown
+# state cannot be plotted. In the current dataset that is
+# 33 rows carrying 16,641.00 of net sales, so this endpoint
+# sums slightly BELOW summary.net_sales by design. Every
+# other revenue chart reconciles exactly.
 # =========================================================
 
-def get_state_sales():
+def get_state_sales(filters=None):
 
-    revenue = func.sum(
+    revenue = net_sales_expr()
 
-        case(
+    query = db.session.query(
 
-            (
-                ~is_cancelled(),
-                Sale.amount
-            ),
+        Sale.ship_state.label("state"),
 
-            else_=0
-        )
+        total_orders_expr().label("orders"),
+
+        total_units_expr().label("quantity"),
+
+        revenue.label("revenue")
     )
 
-    results = (
-
-        db.session
-
-        .query(
-
-            Sale.ship_state.label(
-                "state"
-            ),
-
-            func.count(
-                distinct(
-                    Sale.order_id
-                )
-            ).label(
-                "orders"
-            ),
-
-            func.coalesce(
-                func.sum(
-                    Sale.quantity
-                ),
-                0
-            ).label(
-                "quantity"
-            ),
-
-            func.coalesce(
-                revenue,
-                0
-            ).label(
-                "revenue"
-            )
-        )
-
-        .filter(
-            Sale.ship_state.isnot(None)
-        )
-
-        .group_by(
-            Sale.ship_state
-        )
-
-        .order_by(
-            revenue.desc()
-        )
-
+    rows = (
+        _filters(filters).apply(query)
+        .filter(Sale.ship_state.isnot(None))
+        .group_by(Sale.ship_state)
+        .order_by(revenue.desc())
         .all()
     )
 
     return [
-
         {
-
-            "state":
-                row.state or "Unknown",
-
-            "orders":
-                int(
-                    row.orders or 0
-                ),
-
-            "quantity":
-                int(
-                    row.quantity or 0
-                ),
-
-            "revenue":
-                float(
-                    row.revenue or 0
-                )
+            "state": row.state or "Unknown",
+            "orders": int(row.orders or 0),
+            "quantity": int(row.quantity or 0),
+            "revenue": float(row.revenue or 0)
         }
-
-        for row in results
+        for row in rows
     ]
 
 
 # =========================================================
-# FULFILMENT
+# FULFILMENT  -- net sales by fulfilment channel
 # =========================================================
 
-def get_fulfilment():
+def get_fulfilment(filters=None):
 
-    revenue = func.sum(
+    revenue = net_sales_expr()
 
-        case(
+    query = db.session.query(
 
-            (
-                ~is_cancelled(),
-                Sale.amount
-            ),
+        Sale.fulfilment,
 
-            else_=0
-        )
+        total_orders_expr().label("orders"),
+
+        revenue.label("revenue")
     )
 
-    results = (
-
-        db.session
-
-        .query(
-
-            Sale.fulfilment,
-
-            func.count(
-                distinct(
-                    Sale.order_id
-                )
-            ).label(
-                "orders"
-            ),
-
-            func.coalesce(
-                revenue,
-                0
-            ).label(
-                "revenue"
-            )
-        )
-
-        .group_by(
-            Sale.fulfilment
-        )
-
-        .order_by(
-            revenue.desc()
-        )
-
+    rows = (
+        _filters(filters).apply(query)
+        .group_by(Sale.fulfilment)
+        .order_by(revenue.desc())
         .all()
     )
 
     return [
-
         {
-
-            "fulfilment":
-                row.fulfilment or "Unknown",
-
-            "orders":
-                int(
-                    row.orders or 0
-                ),
-
-            "revenue":
-                float(
-                    row.revenue or 0
-                )
+            "fulfilment": row.fulfilment or "Unknown",
+            "orders": int(row.orders or 0),
+            "revenue": float(row.revenue or 0)
         }
-
-        for row in results
+        for row in rows
     ]
 
 
 # =========================================================
-# ORDER STATUS
+# ORDER STATUS  -- distinct orders + GROSS value
+# =========================================================
+#
+# Uses gross value deliberately: this panel exists to show
+# the cancelled bucket, and net sales defines cancelled
+# value as zero.
 # =========================================================
 
-def get_order_status():
+def get_order_status(filters=None):
 
-    results = (
+    orders = total_orders_expr()
 
-        db.session
+    query = db.session.query(
 
-        .query(
+        Sale.status,
 
-            Sale.status,
+        orders.label("orders"),
 
-            func.count(
-                distinct(
-                    Sale.order_id
-                )
-            ).label(
-                "orders"
-            ),
+        gross_sales_expr().label("sales_value")
+    )
 
-            func.coalesce(
-                func.sum(
-                    Sale.amount
-                ),
-                0
-            ).label(
-                "sales_value"
-            )
-        )
-
-        .group_by(
-            Sale.status
-        )
-
-        .order_by(
-            func.count(
-                distinct(
-                    Sale.order_id
-                )
-            ).desc()
-        )
-
+    rows = (
+        _filters(filters).apply(query)
+        .group_by(Sale.status)
+        .order_by(orders.desc())
         .all()
     )
 
     return [
-
         {
-
-            "status":
-                row.status or "Unknown",
-
-            "orders":
-                int(
-                    row.orders or 0
-                ),
-
-            "sales_value":
-                float(
-                    row.sales_value or 0
-                )
+            "status": row.status or "Unknown",
+            "orders": int(row.orders or 0),
+            "sales_value": float(row.sales_value or 0)
         }
-
-        for row in results
+        for row in rows
     ]
 
 
 # =========================================================
-# SALES CHANNEL
+# SALES CHANNEL  -- net sales by channel
 # =========================================================
 
-def get_sales_channel():
+def get_sales_channel(filters=None):
 
-    revenue = func.sum(
+    revenue = net_sales_expr()
 
-        case(
+    query = db.session.query(
 
-            (
-                ~is_cancelled(),
-                Sale.amount
-            ),
+        Sale.sales_channel,
 
-            else_=0
-        )
+        total_orders_expr().label("orders"),
+
+        revenue.label("revenue")
     )
 
-    results = (
-
-        db.session
-
-        .query(
-
-            Sale.sales_channel,
-
-            func.count(
-                distinct(
-                    Sale.order_id
-                )
-            ).label(
-                "orders"
-            ),
-
-            func.coalesce(
-                revenue,
-                0
-            ).label(
-                "revenue"
-            )
-        )
-
-        .group_by(
-            Sale.sales_channel
-        )
-
-        .order_by(
-            revenue.desc()
-        )
-
+    rows = (
+        _filters(filters).apply(query)
+        .group_by(Sale.sales_channel)
+        .order_by(revenue.desc())
         .all()
     )
 
     return [
-
         {
-
-            "channel":
-                row.sales_channel or "Unknown",
-
-            "orders":
-                int(
-                    row.orders or 0
-                ),
-
-            "revenue":
-                float(
-                    row.revenue or 0
-                )
+            "channel": row.sales_channel or "Unknown",
+            "orders": int(row.orders or 0),
+            "revenue": float(row.revenue or 0)
         }
-
-        for row in results
+        for row in rows
     ]
 
 
 # =========================================================
-# TOP PRODUCTS
+# TOP PRODUCTS  -- net sales by SKU
 # =========================================================
 
-def get_top_products(
-    limit=10
-):
+def get_top_products(filters=None, limit=10):
 
-    revenue = func.sum(
+    revenue = net_sales_expr()
 
-        case(
+    query = db.session.query(
 
-            (
-                ~is_cancelled(),
-                Sale.amount
-            ),
+        Sale.sku,
+        Sale.style,
+        Sale.category,
 
-            else_=0
-        )
+        total_units_expr().label("quantity"),
+
+        revenue.label("revenue")
     )
 
-    results = (
-
-        db.session
-
-        .query(
-
-            Sale.sku,
-
-            Sale.style,
-
-            Sale.category,
-
-            func.coalesce(
-                func.sum(
-                    Sale.quantity
-                ),
-                0
-            ).label(
-                "quantity"
-            ),
-
-            func.coalesce(
-                revenue,
-                0
-            ).label(
-                "revenue"
-            )
-        )
-
-        .filter(
-            Sale.sku.isnot(None)
-        )
-
-        .group_by(
-
-            Sale.sku,
-
-            Sale.style,
-
-            Sale.category
-        )
-
-        .order_by(
-            revenue.desc()
-        )
-
-        .limit(
-            limit
-        )
-
+    rows = (
+        _filters(filters).apply(query)
+        .filter(Sale.sku.isnot(None))
+        .group_by(Sale.sku, Sale.style, Sale.category)
+        .order_by(revenue.desc())
+        .limit(limit)
         .all()
     )
 
     return [
-
         {
-
-            "sku":
-                row.sku,
-
-            "style":
-                row.style,
-
-            "category":
-                row.category,
-
-            "quantity":
-                int(
-                    row.quantity or 0
-                ),
-
-            "revenue":
-                float(
-                    row.revenue or 0
-                )
+            "sku": row.sku,
+            "style": row.style,
+            "category": row.category,
+            "quantity": int(row.quantity or 0),
+            "revenue": float(row.revenue or 0)
         }
-
-        for row in results
+        for row in rows
     ]
 
 
@@ -890,31 +344,16 @@ def get_top_products(
 # COMPLETE DASHBOARD
 # =========================================================
 
-def get_dashboard_data():
+def get_dashboard_data(filters=None):
+    """Every dataset in one payload, sharing one filter set."""
 
     return {
-
-        "kpis":
-            get_kpis(),
-
-        "sales_trend":
-            get_sales_trend(),
-
-        "categories":
-            get_category_sales(),
-
-        "states":
-            get_state_sales(),
-
-        "fulfilment":
-            get_fulfilment(),
-
-        "order_status":
-            get_order_status(),
-
-        "sales_channel":
-            get_sales_channel(),
-
-        "top_products":
-            get_top_products()
+        "kpis": get_kpis(filters),
+        "sales_trend": get_sales_trend(filters),
+        "categories": get_category_sales(filters),
+        "states": get_state_sales(filters),
+        "fulfilment": get_fulfilment(filters),
+        "order_status": get_order_status(filters),
+        "sales_channel": get_sales_channel(filters),
+        "top_products": get_top_products(filters)
     }

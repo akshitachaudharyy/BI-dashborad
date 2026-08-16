@@ -102,6 +102,144 @@
 
             </section>
 
+            <!-- ============================================= -->
+            <!-- FILTER BAR                                    -->
+            <!-- ============================================= -->
+            <!--
+                Controls are populated from
+                /api/dashboard/filter-options (MySQL), never
+                hard-coded. Applying filters re-requests the
+                API; the page never reloads.
+            -->
+
+            <form class="filter-bar" id="filterBar" novalidate>
+
+                <div class="filter-bar__fields">
+
+                    <div class="filter-field">
+                        <label class="filter-field__label"
+                               for="filterDateFrom">Date from</label>
+                        <input
+                            type="date"
+                            class="filter-field__control"
+                            id="filterDateFrom"
+                            name="date_from"
+                            min="2022-03-31"
+                            max="2022-06-29"
+                        >
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-field__label"
+                               for="filterDateTo">Date to</label>
+                        <input
+                            type="date"
+                            class="filter-field__control"
+                            id="filterDateTo"
+                            name="date_to"
+                            min="2022-03-31"
+                            max="2022-06-29"
+                        >
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-field__label"
+                               for="filterStatus">Status</label>
+                        <select
+                            class="filter-field__control"
+                            id="filterStatus"
+                            name="status"
+                            data-options="statuses"
+                        >
+                            <option value="">All statuses</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-field__label"
+                               for="filterCategory">Category</label>
+                        <select
+                            class="filter-field__control"
+                            id="filterCategory"
+                            name="category"
+                            data-options="categories"
+                        >
+                            <option value="">All categories</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-field__label"
+                               for="filterState">State</label>
+                        <select
+                            class="filter-field__control"
+                            id="filterState"
+                            name="state"
+                            data-options="states"
+                        >
+                            <option value="">All states</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-field__label"
+                               for="filterFulfilment">Fulfilment</label>
+                        <select
+                            class="filter-field__control"
+                            id="filterFulfilment"
+                            name="fulfilment"
+                            data-options="fulfilments"
+                        >
+                            <option value="">All</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="filter-field__label"
+                               for="filterChannel">Sales channel</label>
+                        <select
+                            class="filter-field__control"
+                            id="filterChannel"
+                            name="sales_channel"
+                            data-options="sales_channels"
+                        >
+                            <option value="">All channels</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="filter-bar__actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn--dark"
+                        id="applyFiltersButton"
+                    >
+                        Apply Filters
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn--ghost"
+                        id="resetFiltersButton"
+                    >
+                        Reset
+                    </button>
+
+                </div>
+
+            </form>
+
+            <!-- ACTIVE FILTER SUMMARY -->
+
+            <p
+                class="filter-summary"
+                id="filterSummary"
+                role="status"
+                aria-live="polite"
+            ></p>
+
             <!-- ERROR STATE -->
 
             <section
@@ -244,7 +382,7 @@
                                 data-format="currency"
                             >—</span>
                             <span class="stat-tile__note">
-                                Net sales ÷ total orders
+                                Net sales ÷ valid orders
                             </span>
                         </article>
 

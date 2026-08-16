@@ -32,7 +32,8 @@
             status: "/api/dashboard/status",
             fulfilment: "/api/dashboard/fulfilment",
             channels: "/api/dashboard/channels",
-            products: "/api/dashboard/top-products"
+            products: "/api/dashboard/top-products",
+            filterOptions: "/api/dashboard/filter-options"
         },
 
         locale: "en-IN",
@@ -57,6 +58,21 @@
     // =====================================================
 
     const dashboardState = {
+
+        // Filters are the single source of truth for what
+        // the dashboard is currently showing. Every API
+        // request is built from this object.
+        filters: {
+            date_from: null,
+            date_to: null,
+            status: null,
+            category: null,
+            state: null,
+            fulfilment: null,
+            sales_channel: null
+        },
+
+        filterOptions: null,
 
         summary: null,
 
@@ -103,6 +119,27 @@
 
         elements.refreshButton = byId("refreshButton");
         elements.retryButton = byId("retryButton");
+
+        elements.filterBar = byId("filterBar");
+        elements.filterSummary = byId("filterSummary");
+        elements.applyFiltersButton = byId("applyFiltersButton");
+        elements.resetFiltersButton = byId("resetFiltersButton");
+
+        // Keyed by the API parameter name so filter state,
+        // controls and query string all stay aligned.
+        elements.filterInputs = {
+            date_from: byId("filterDateFrom"),
+            date_to: byId("filterDateTo"),
+            status: byId("filterStatus"),
+            category: byId("filterCategory"),
+            state: byId("filterState"),
+            fulfilment: byId("filterFulfilment"),
+            sales_channel: byId("filterChannel")
+        };
+
+        elements.filterSelects = Array.prototype.slice.call(
+            document.querySelectorAll("select[data-options]")
+        );
 
         elements.themeToggle = byId("themeToggle");
         elements.themeIcon = byId("themeIcon");
@@ -1184,9 +1221,7 @@
 
         showChartsMessage("Loading…");
 
-        if (elements.refreshButton) {
-            elements.refreshButton.disabled = true;
-        }
+        setControlsDisabled(true);
     }
 
 
@@ -1194,9 +1229,26 @@
 
         setBusy(false);
 
-        if (elements.refreshButton) {
-            elements.refreshButton.disabled = false;
-        }
+        setControlsDisabled(false);
+    }
+
+
+    /**
+     * Locks the action buttons while a request is in
+     * flight, so a second Apply cannot race the first.
+     */
+    function setControlsDisabled(disabled) {
+
+        [
+            elements.refreshButton,
+            elements.applyFiltersButton,
+            elements.resetFiltersButton
+        ].forEach(function (button) {
+
+            if (button) {
+                button.disabled = disabled;
+            }
+        });
     }
 
 
@@ -1294,6 +1346,39 @@
     // DATA LOADING
     // =====================================================
 
+    /**
+     * Serialises dashboardState.filters into a query
+     * string. Empty filters are omitted entirely so an
+     * unfiltered dashboard requests the complete dataset.
+     */
+    function buildQueryString() {
+
+        const params = new URLSearchParams();
+
+        Object.keys(dashboardState.filters).forEach(function (key) {
+
+            const value = dashboardState.filters[key];
+
+            if (value !== null && value !== undefined && value !== "") {
+                params.append(key, value);
+            }
+        });
+
+        const query = params.toString();
+
+        return query ? "?" + query : "";
+    }
+
+
+    /**
+     * Fetches JSON and unwraps the standard API envelope:
+     *
+     *   { success: true, filters: {...}, data: ... }
+     *
+     * Throws with the server-supplied message on failure so
+     * a 400 from an invalid filter surfaces useful text
+     * rather than a bare status code.
+     */
     async function requestJson(url) {
 
         const response = await fetch(url, {
@@ -1318,14 +1403,6 @@
             );
         }
 
-        return payload;
-    }
-
-
-    async function loadSummary() {
-
-        const payload = await requestJson(CONFIG.endpoints.summary);
-
         if (!payload || payload.success !== true) {
             throw new Error(
                 (payload && payload.error) ||
@@ -1333,7 +1410,7 @@
             );
         }
 
-        if (!payload.data || typeof payload.data !== "object") {
+        if (payload.data === undefined || payload.data === null) {
             throw new Error(
                 "The dashboard API response did not include any data."
             );
@@ -1343,12 +1420,26 @@
     }
 
 
+    async function loadSummary(query) {
+
+        const data = await requestJson(CONFIG.endpoints.summary + query);
+
+        if (typeof data !== "object" || Array.isArray(data)) {
+            throw new Error(
+                "The summary endpoint returned an unexpected shape."
+            );
+        }
+
+        return data;
+    }
+
+
     /**
      * Analytics panels are secondary: a failure there must
      * not take down the KPI dashboard, so each request
      * resolves to null instead of rejecting.
      */
-    async function loadAnalytics() {
+    async function loadAnalytics(query) {
 
         const keys = [
             "trend",
@@ -1362,7 +1453,7 @@
 
         const results = await Promise.all(keys.map(function (key) {
 
-            return requestJson(CONFIG.endpoints[key])
+            return requestJson(CONFIG.endpoints[key] + query)
                 .catch(function (error) {
                     console.error("[dashboard] " + key + " failed:", error);
                     return null;
@@ -1379,6 +1470,52 @@
     }
 
 
+    /**
+     * Populates the filter controls from MySQL. Never
+     * hard-coded; fetched once per page load.
+     */
+    async function loadFilterOptions() {
+
+        try {
+
+            const options = await requestJson(
+                CONFIG.endpoints.filterOptions
+            );
+
+            dashboardState.filterOptions = options;
+
+            elements.filterSelects.forEach(function (select) {
+
+                const key = select.getAttribute("data-options");
+                const values = options[key];
+
+                if (!Array.isArray(values)) {
+                    return;
+                }
+
+                // Keep the leading "All ..." option.
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+
+                values.forEach(function (value) {
+                    const option = document.createElement("option");
+                    option.value = value;
+                    option.textContent = value;
+                    select.appendChild(option);
+                });
+            });
+
+        } catch (error) {
+
+            console.error("[dashboard] filter options failed:", error);
+
+            // The dashboard still works without the dropdown
+            // lists, so this is not fatal.
+        }
+    }
+
+
     async function loadDashboard() {
 
         if (dashboardState.loading) {
@@ -1390,22 +1527,26 @@
 
         showLoadingState();
 
+        const query = buildQueryString();
+
         try {
 
-            const summary = await loadSummary();
+            const summary = await loadSummary(query);
 
             dashboardState.summary = summary;
             dashboardState.lastUpdated = new Date();
 
             if (isEmptySummary(summary)) {
+                renderFilterSummary();
                 showEmptyState();
                 return;
             }
 
             renderSummary(summary);
+            renderFilterSummary();
             showDataState();
 
-            const analytics = await loadAnalytics();
+            const analytics = await loadAnalytics(query);
 
             dashboardState.analytics = analytics;
 
@@ -1424,6 +1565,106 @@
 
             dashboardState.loading = false;
         }
+    }
+
+
+    // =====================================================
+    // FILTER CONTROLS
+    // =====================================================
+
+    const FILTER_LABELS = {
+        date_from: "From",
+        date_to: "To",
+        status: "Status",
+        category: "Category",
+        state: "State",
+        fulfilment: "Fulfilment",
+        sales_channel: "Channel"
+    };
+
+
+    /** Copies the filter controls into dashboardState. */
+    function readFilterControls() {
+
+        Object.keys(elements.filterInputs).forEach(function (key) {
+
+            const control = elements.filterInputs[key];
+            const value = control ? control.value.trim() : "";
+
+            dashboardState.filters[key] = value === "" ? null : value;
+        });
+    }
+
+
+    /** Writes dashboardState back onto the controls. */
+    function writeFilterControls() {
+
+        Object.keys(elements.filterInputs).forEach(function (key) {
+
+            const control = elements.filterInputs[key];
+
+            if (control) {
+                control.value = dashboardState.filters[key] || "";
+            }
+        });
+    }
+
+
+    /**
+     * Describes which filters the displayed numbers
+     * reflect, so a filtered dashboard can never be
+     * mistaken for the complete dataset.
+     */
+    function renderFilterSummary() {
+
+        const node = elements.filterSummary;
+
+        if (!node) {
+            return;
+        }
+
+        clearNode(node);
+
+        const active = Object.keys(dashboardState.filters)
+            .filter(function (key) {
+                return dashboardState.filters[key];
+            });
+
+        if (!active.length) {
+            node.textContent = "Showing the complete dataset.";
+            return;
+        }
+
+        node.appendChild(document.createTextNode("Filtered by "));
+
+        active.forEach(function (key) {
+
+            node.appendChild(
+                createElement(
+                    "span",
+                    "filter-summary__chip",
+                    FILTER_LABELS[key] + ": " + dashboardState.filters[key]
+                )
+            );
+        });
+    }
+
+
+    function applyFilters() {
+
+        readFilterControls();
+        loadDashboard();
+    }
+
+
+    function resetFilters() {
+
+        Object.keys(dashboardState.filters).forEach(function (key) {
+            dashboardState.filters[key] = null;
+        });
+
+        writeFilterControls();
+        loadDashboard();
     }
 
 
@@ -1518,6 +1759,24 @@
             elements.themeToggle.addEventListener("click", toggleTheme);
         }
 
+        // Submitting the form (Apply, or Enter in a field)
+        // must never reload the page.
+        if (elements.filterBar) {
+            elements.filterBar.addEventListener("submit", function (event) {
+                event.preventDefault();
+                applyFilters();
+            });
+        }
+
+        if (elements.resetFiltersButton) {
+            elements.resetFiltersButton.addEventListener(
+                "click",
+                function (event) {
+                    event.preventDefault();
+                    resetFilters();
+                }
+            );
+        }
     }
 
 
@@ -1530,6 +1789,10 @@
         cacheElements();
         initTheme();
         bindEvents();
+
+        // Filter lists and dashboard data load in parallel;
+        // neither blocks the other.
+        loadFilterOptions();
         loadDashboard();
     }
 
