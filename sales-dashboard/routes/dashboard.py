@@ -129,3 +129,54 @@ def top_products():
     return jsonify(
         get_top_products()
     )
+    
+dashboard_bp = Blueprint(
+    "dashboard",
+    __name__,
+    url_prefix="/api/dashboard"
+)
+
+from services.bi_metrics import SalesMetrics
+
+
+dashboard_bp = Blueprint(
+    "dashboard",
+    __name__,
+    url_prefix="/api/dashboard"
+)
+
+
+# =========================================================
+# DASHBOARD SUMMARY
+# =========================================================
+
+@dashboard_bp.route(
+    "/summary",
+    methods=["GET"]
+)
+def dashboard_summary():
+
+    try:
+
+        data = (
+            SalesMetrics
+            .dashboard_summary()
+        )
+
+        return jsonify({
+
+            "success": True,
+
+            "data": data
+
+        })
+
+    except Exception as error:
+
+        return jsonify({
+
+            "success": False,
+
+            "error": str(error)
+
+        }), 500

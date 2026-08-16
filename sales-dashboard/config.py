@@ -1,5 +1,7 @@
 import os
 
+from urllib.parse import quote_plus
+
 from dotenv import load_dotenv
 
 
@@ -38,9 +40,12 @@ class Config:
         ""
     )
 
+    # Escape credentials so characters such as
+    # # @ : / do not break the connection URI
     SQLALCHEMY_DATABASE_URI = (
         f"mysql+pymysql://"
-        f"{MYSQL_USER}:{MYSQL_PASSWORD}"
+        f"{quote_plus(MYSQL_USER)}:"
+        f"{quote_plus(MYSQL_PASSWORD)}"
         f"@{MYSQL_HOST}:{MYSQL_PORT}/"
         f"{MYSQL_DATABASE}"
     )
