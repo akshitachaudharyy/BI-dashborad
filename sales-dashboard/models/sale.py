@@ -1,4 +1,4 @@
-```from database import db
+from database import db
 
 
 class Sale(db.Model):
@@ -123,4 +123,4 @@ class Sale(db.Model):
     )
 
     def __repr__(self):
-        return f"<Sale {self.order_id}>"```
+        return f"<Sale {self.order_id}>"
