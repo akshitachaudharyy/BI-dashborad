@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, jsonify
 
 from config import Config
@@ -103,8 +105,18 @@ def info():
 
 if __name__ == "__main__":
 
+    # Local development entry point only. In production a
+    # WSGI server (gunicorn) imports `app` directly and this
+    # block never runs -- see Procfile.
+    #
+    # PORT is supplied by the hosting platform; FLASK_DEBUG
+    # must stay off anywhere other than a local machine.
+    port = int(os.getenv("PORT", "5000"))
+
+    debug = os.getenv("FLASK_DEBUG", "1") == "1"
+
     app.run(
-        host="127.0.0.1",
-        port=5000,
-        debug=True
+        host="0.0.0.0" if os.getenv("PORT") else "127.0.0.1",
+        port=port,
+        debug=debug
     )

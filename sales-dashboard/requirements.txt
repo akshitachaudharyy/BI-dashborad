@@ -1,5 +1,14 @@
-Flask-SQLAlchemy
-PyMySQL
-pandas
-openpyxl
-python-dotenv
+Flask==3.1.3
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.52
+PyMySQL==1.2.0
+python-dotenv==1.2.2
+
+# Production WSGI server (Railway / any Linux host).
+# The Flask dev server is not used in deployment.
+gunicorn==23.0.0
+
+# Used by services/importer.py for CSV/Excel ingestion.
+# Not touched by dashboard requests.
+pandas==3.0.5
+openpyxl==3.1.5
