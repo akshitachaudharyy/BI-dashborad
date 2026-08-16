@@ -9,6 +9,7 @@ from database import db
 
 # Import models
 from models import Sale, ImportBatch
+from routes.dashboard import dashboard_api
 
 
 def create_app():
@@ -36,6 +37,10 @@ def create_app():
     # -----------------------------------------------------
     # Routes
     # -----------------------------------------------------
+
+    app.register_blueprint(
+    dashboard_api
+    )
 
     @app.route("/")
     def dashboard():
