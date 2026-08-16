@@ -28,13 +28,14 @@ def main():
         try:
 
             result = import_file(
-                file_path
+                file_path,
+                profile=True
             )
 
             print()
-            print("=" * 50)
+            print("=" * 60)
             print("IMPORT SUCCESSFUL")
-            print("=" * 50)
+            print("=" * 60)
 
             print(
                 f"Batch ID: "
@@ -51,12 +52,14 @@ def main():
                 f"{result['rows_imported']:,}"
             )
 
+            print("=" * 60)
+
         except Exception as error:
 
             print()
-            print("=" * 50)
+            print("=" * 60)
             print("IMPORT FAILED")
-            print("=" * 50)
+            print("=" * 60)
 
             print(error)
 
@@ -64,4 +67,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()

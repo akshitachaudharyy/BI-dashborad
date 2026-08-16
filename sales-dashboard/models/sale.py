@@ -11,11 +11,19 @@ class Sale(db.Model):
         autoincrement=True
     )
 
+    # -----------------------------------------------------
+    # Source information
+    # -----------------------------------------------------
+
     source_index = db.Column(
         db.Integer,
         nullable=False,
         index=True
     )
+
+    # -----------------------------------------------------
+    # Order
+    # -----------------------------------------------------
 
     order_id = db.Column(
         db.String(100),
@@ -35,8 +43,12 @@ class Sale(db.Model):
         index=True
     )
 
+    # -----------------------------------------------------
+    # Fulfilment
+    # -----------------------------------------------------
+
     fulfilment = db.Column(
-        db.String(50),
+        db.String(100),
         nullable=True,
         index=True
     )
@@ -45,6 +57,16 @@ class Sale(db.Model):
         db.String(100),
         nullable=True
     )
+
+    courier_status = db.Column(
+        db.String(100),
+        nullable=True,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # Sales channel
+    # -----------------------------------------------------
 
     sales_channel = db.Column(
         db.String(100),
@@ -56,6 +78,10 @@ class Sale(db.Model):
         db.String(100),
         nullable=True
     )
+
+    # -----------------------------------------------------
+    # Product
+    # -----------------------------------------------------
 
     style = db.Column(
         db.String(255),
@@ -81,14 +107,13 @@ class Sale(db.Model):
 
     asin = db.Column(
         db.String(100),
-        nullable=True
-    )
-
-    courier_status = db.Column(
-        db.String(100),
         nullable=True,
         index=True
     )
+
+    # -----------------------------------------------------
+    # Shipping
+    # -----------------------------------------------------
 
     ship_city = db.Column(
         db.String(255),
@@ -112,6 +137,10 @@ class Sale(db.Model):
         nullable=True
     )
 
+    # -----------------------------------------------------
+    # Financial
+    # -----------------------------------------------------
+
     quantity = db.Column(
         db.Integer,
         nullable=True
@@ -126,6 +155,10 @@ class Sale(db.Model):
         db.Numeric(12, 2),
         nullable=True
     )
+
+    # -----------------------------------------------------
+    # Other
+    # -----------------------------------------------------
 
     promotion_ids = db.Column(
         db.Text,

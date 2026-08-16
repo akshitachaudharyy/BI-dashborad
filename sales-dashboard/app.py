@@ -5,11 +5,17 @@ from flask import (
 )
 
 from config import Config
+
 from database import db
 
-# Import models
-from models import Sale, ImportBatch
-from routes.dashboard import dashboard_api
+from models import (
+    Sale,
+    ImportBatch
+)
+
+from routes.dashboard import (
+    dashboard_api
+)
 
 
 def create_app():
@@ -19,7 +25,7 @@ def create_app():
     )
 
     # -----------------------------------------------------
-    # Configuration
+    # Config
     # -----------------------------------------------------
 
     app.config.from_object(
@@ -35,12 +41,16 @@ def create_app():
     )
 
     # -----------------------------------------------------
-    # Routes
+    # API
     # -----------------------------------------------------
 
     app.register_blueprint(
-    dashboard_api
+        dashboard_api
     )
+
+    # -----------------------------------------------------
+    # Dashboard
+    # -----------------------------------------------------
 
     @app.route("/")
     def dashboard():
@@ -50,7 +60,7 @@ def create_app():
         )
 
     # -----------------------------------------------------
-    # Health check
+    # Health
     # -----------------------------------------------------
 
     @app.route(
@@ -60,14 +70,15 @@ def create_app():
 
         return jsonify({
 
-            "status": "success",
+            "status":
+                "success",
 
             "message":
                 "Sales Analytics API is running"
         })
 
     # -----------------------------------------------------
-    # Database check
+    # Database
     # -----------------------------------------------------
 
     @app.route(
@@ -77,15 +88,21 @@ def create_app():
 
         try:
 
-            total_records = (
+            sales_count = (
+
                 db.session
+
                 .query(Sale)
+
                 .count()
             )
 
-            total_imports = (
+            import_count = (
+
                 db.session
+
                 .query(ImportBatch)
+
                 .count()
             )
 
@@ -98,10 +115,10 @@ def create_app():
                     "connected",
 
                 "sales_records":
-                    total_records,
+                    sales_count,
 
                 "import_batches":
-                    total_imports
+                    import_count
             })
 
         except Exception as error:
@@ -127,7 +144,10 @@ app = create_app()
 if __name__ == "__main__":
 
     app.run(
+
         host="127.0.0.1",
+
         port=5000,
+
         debug=True
     )

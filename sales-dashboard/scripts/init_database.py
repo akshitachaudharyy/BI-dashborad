@@ -1,9 +1,10 @@
 from app import create_app
 from database import db
 
-# Important:
-# Import models before db.create_all()
-from models import Sale, ImportBatch
+from models import (
+    Sale,
+    ImportBatch
+)
 
 
 def main():

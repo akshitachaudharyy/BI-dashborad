@@ -1,14 +1,26 @@
-from flask import Blueprint, jsonify
+from flask import (
+    Blueprint,
+    jsonify
+)
 
 from services.analytics import (
+
     get_dashboard_data,
+
     get_kpis,
+
     get_sales_trend,
+
     get_category_sales,
+
     get_state_sales,
+
     get_fulfilment,
+
     get_order_status,
+
     get_sales_channel,
+
     get_top_products
 )
 
