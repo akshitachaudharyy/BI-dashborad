@@ -7,7 +7,14 @@ class Sale(db.Model):
 
     id = db.Column(
         db.Integer,
-        primary_key=True
+        primary_key=True,
+        autoincrement=True
+    )
+
+    source_index = db.Column(
+        db.Integer,
+        nullable=False,
+        index=True
     )
 
     order_id = db.Column(
@@ -30,12 +37,19 @@ class Sale(db.Model):
 
     fulfilment = db.Column(
         db.String(50),
+        nullable=True,
+        index=True
+    )
+
+    fulfilled_by = db.Column(
+        db.String(100),
         nullable=True
     )
 
     sales_channel = db.Column(
         db.String(100),
-        nullable=True
+        nullable=True,
+        index=True
     )
 
     ship_service_level = db.Column(
@@ -72,22 +86,8 @@ class Sale(db.Model):
 
     courier_status = db.Column(
         db.String(100),
-        nullable=True
-    )
-
-    quantity = db.Column(
-        db.Integer,
-        nullable=True
-    )
-
-    currency = db.Column(
-        db.String(20),
-        nullable=True
-    )
-
-    amount = db.Column(
-        db.Numeric(12, 2),
-        nullable=True
+        nullable=True,
+        index=True
     )
 
     ship_city = db.Column(
@@ -112,15 +112,31 @@ class Sale(db.Model):
         nullable=True
     )
 
+    quantity = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    currency = db.Column(
+        db.String(20),
+        nullable=True
+    )
+
+    amount = db.Column(
+        db.Numeric(12, 2),
+        nullable=True
+    )
+
+    promotion_ids = db.Column(
+        db.Text,
+        nullable=True
+    )
+
     b2b = db.Column(
         db.Boolean,
         nullable=True
     )
 
-    fulfilled_by = db.Column(
-        db.String(100),
-        nullable=True
-    )
-
     def __repr__(self):
+
         return f"<Sale {self.order_id}>"

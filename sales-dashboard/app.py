@@ -1,61 +1,116 @@
-from flask import Flask, jsonify, render_template
+from flask import (
+    Flask,
+    jsonify,
+    render_template
+)
 
 from config import Config
 from database import db
 
-from models import Sale
+# Import models
+from models import Sale, ImportBatch
 
 
 def create_app():
 
-    app = Flask(__name__)
+    app = Flask(
+        __name__
+    )
 
-    # Load configuration
-    app.config.from_object(Config)
+    # -----------------------------------------------------
+    # Configuration
+    # -----------------------------------------------------
 
-    # Initialize database
-    db.init_app(app)
+    app.config.from_object(
+        Config
+    )
 
-    # Create database tables
-    with app.app_context():
-        db.create_all()
+    # -----------------------------------------------------
+    # Database
+    # -----------------------------------------------------
 
-    # Home page
+    db.init_app(
+        app
+    )
+
+    # -----------------------------------------------------
+    # Routes
+    # -----------------------------------------------------
+
     @app.route("/")
     def dashboard():
-        return render_template("dashboard.html")
 
+        return render_template(
+            "dashboard.html"
+        )
+
+    # -----------------------------------------------------
     # Health check
-    @app.route("/api/health")
+    # -----------------------------------------------------
+
+    @app.route(
+        "/api/health"
+    )
     def health():
 
         return jsonify({
+
             "status": "success",
-            "message": "Sales Analytics API is running"
+
+            "message":
+                "Sales Analytics API is running"
         })
 
-    # Basic database test
-    @app.route("/api/database")
+    # -----------------------------------------------------
+    # Database check
+    # -----------------------------------------------------
+
+    @app.route(
+        "/api/database"
+    )
     def database_test():
 
         try:
 
-            total_records = db.session.query(
-                Sale
-            ).count()
+            total_records = (
+                db.session
+                .query(Sale)
+                .count()
+            )
+
+            total_imports = (
+                db.session
+                .query(ImportBatch)
+                .count()
+            )
 
             return jsonify({
-                "status": "success",
-                "database": "connected",
-                "records": total_records
+
+                "status":
+                    "success",
+
+                "database":
+                    "connected",
+
+                "sales_records":
+                    total_records,
+
+                "import_batches":
+                    total_imports
             })
 
         except Exception as error:
 
             return jsonify({
-                "status": "error",
-                "database": "connection failed",
-                "message": str(error)
+
+                "status":
+                    "error",
+
+                "database":
+                    "connection failed",
+
+                "message":
+                    str(error)
             }), 500
 
     return app
